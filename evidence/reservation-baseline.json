@@ -1,0 +1,27 @@
+{
+  "case": "capacity-reservation-v1",
+  "commit": "62f2665940125e90cf3ac531560c5575bcdf971c",
+  "tracked_changes": false,
+  "lean": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "python": "3.12.3",
+  "node": "v24.22.3",
+  "model_claim_axioms": {
+    "accept_if_fits": [],
+    "reject_if_exceeds": [],
+    "accepted_within_capacity": []
+  },
+  "matching_rows": {
+    "python": 518,
+    "typescript": 518
+  },
+  "negative_control": {
+    "differences": 40,
+    "first_input": [
+      0,
+      0,
+      0
+    ],
+    "oracle": "0",
+    "mutant": "reject"
+  }
+}

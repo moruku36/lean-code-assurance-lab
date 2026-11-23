@@ -18,4 +18,12 @@ jobs:
           auto-config: 'false'
           use-github-cache: 'false'
       - name: Build the proof, audit axioms and compare implementations
-        run: python3 scripts/check.py
+        run: |
+          set -o pipefail
+          python3 scripts/check.py | tee "$RUNNER_TEMP/reservation.json"
+          {
+            echo '### Reservation evidence'
+            echo '```json'
+            cat "$RUNNER_TEMP/reservation.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
