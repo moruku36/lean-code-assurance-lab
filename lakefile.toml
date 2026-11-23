@@ -1,0 +1,10 @@
+name = "assurance_lab"
+version = "0.1.0"
+defaultTargets = ["Reservation", "oracle"]
+
+[[lean_lib]]
+name = "Reservation"
+
+[[lean_exe]]
+name = "oracle"
+root = "Oracle"
