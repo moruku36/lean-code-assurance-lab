@@ -12,6 +12,8 @@
 | 3 · Link a Rust source | Choose one safe Rust function with explicit overflow policy. Attempt a pinned translation with Aeneas, prove the property of its output, and replay boundary cases against the source. | Record the source-to-model correspondence, remaining translator assumptions, or the exact unsupported feature. |
 | 4 · Extend to state | Model a sequence such as reserve, cancel, retry; add storage or concurrency semantics one at a time. | Report an invariant on reachable states and a real trace that exercises its boundary. |
 
+The [first held-out result](stage-1-lean-pilot-results.md) is now recorded. Adding Lean 4 did not increase defect detection in the six-revision pilot. Lean is not a default review requirement; the next comparison targets large-integer exchange and ordering.
+
 ## The first comparative experiment
 
 1. A maintainer fixes the natural-language contract, reference outcomes, clean starting revision, allowed files and budgets in advance. Another person or process holds back the labeled revisions and final cases from the agent. Include valid changes to measure false alarms.
