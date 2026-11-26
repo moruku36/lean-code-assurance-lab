@@ -1,0 +1,58 @@
+{
+  "base": "9ba3ede95ff23dd15bf9b406b42eeb8a28883dd7",
+  "lean": {
+    "theorems": {
+      "chunks_cover": [
+        "propext",
+        "Quot.sound"
+      ],
+      "resume_walk_covers_unchanged": [
+        "propext",
+        "Quot.sound"
+      ],
+      "resume_walk_rejects_changed": [
+        "propext"
+      ],
+      "walk_covers_exact_suffix": [
+        "propext",
+        "Quot.sound"
+      ]
+    },
+    "version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+    "walks": 54
+  },
+  "legacy_page_compatibility_per_runtime": 54,
+  "linux_snapshot_open_events": {
+    "alternating_legacy": {
+      "exact_snapshot_bytes_validated": 7112000,
+      "opens": 28
+    },
+    "pinned_walk_each": {
+      "python": {
+        "exact_snapshot_bytes_validated": 254000,
+        "opens": 1
+      },
+      "typescript": {
+        "exact_snapshot_bytes_validated": 254000,
+        "opens": 1
+      }
+    },
+    "validated_read_reduction_factor_each": 28
+  },
+  "negative_controls": {
+    "pin_clause_disabled": "wrong_snapshot_admitted",
+    "stride_plus_one": {
+      "omitted_key": "18446744073709551616"
+    }
+  },
+  "node": "v24.22.3",
+  "python": "Python 3.12.14",
+  "scale": {
+    "bytes": 254000,
+    "page_size": 37,
+    "pages": 28,
+    "rows": 1000,
+    "snapshot_sha256": "27692cf6180d0a66df1c888facaf0ab8bccf248b69bb4ea15fbf8a914d47b728"
+  },
+  "walks_matching_ordinal_oracle_per_runtime": 54
+}

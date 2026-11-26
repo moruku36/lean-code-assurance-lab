@@ -1,0 +1,50 @@
+{
+  "baseline_unchanged": "85f0b52d8c3f75d825140f0eb82d17800f7fe606",
+  "byte_identical_replacement_resumed": true,
+  "clients": {
+    "node": "v24.22.3",
+    "python": "Python 3.12.14"
+  },
+  "cross_language_handoffs": 40,
+  "duplicate_on_lossy_client_boundary": {
+    "accepted_paths": 4,
+    "client_intended": "9007199254740993",
+    "client_sent": "9007199254740992",
+    "replayed_key": "9007199254740993"
+  },
+  "exponential_boundary": "1e+127",
+  "fixtures": {
+    "pivots": [
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "rows": 14,
+    "snapshot_sha256": "1135c4e19feb93d0a8938d2e7dbb572c0c22265af3346be645cb634917a32b4b"
+  },
+  "lean": {
+    "axioms": {
+      "earlier_adjacent_boundary_replays": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "exact_handoff_joins_prefix": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    "cases": 10,
+    "toolchain": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)"
+  },
+  "nondigit_or_129_digit_rejections": 8,
+  "stale_start_rejections": 4
+}
