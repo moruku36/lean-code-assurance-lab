@@ -35,11 +35,28 @@ python scripts/check.py
 
 On systems where Python is named `python3`, use `python3 scripts/check.py`. The first public run checked all three theorems, matched 518 cases per language and detected the incorrect boundary in 40 cases. Read the [recorded JSON](evidence/reservation-baseline.json), [current CI runs](https://github.com/moruku36/lean-code-assurance-lab/actions/workflows/assurance.yml) or the [guided walkthrough](docs/walkthrough.md).
 
+## Lean 4 results so far
+
+- **Reviewer comparison:** The [first held-out pilot](docs/stage-1-lean-pilot-results.md) found no additional defects with Lean across six revisions. Lean is not a default review requirement.
+- **Exact pagination:** The [checkpoint case](docs/checkpoint-page.md) matched 54 page requests per language and 12 alternating traversals. A changed snapshot rejects the old cursor.
+- **One-buffer traversal:** On a synthetic 1,000-row fixture, the [opt-in walk](docs/checkpoint-walk.md) returned the same 28 pages with **one file open instead of 28** on Linux. This is not a wall-clock benchmark.
+- **Cursor handoff:** [40 Python/TypeScript handoffs](docs/checkpoint-handoff.md) matched the reference. Keep cursor keys as decimal strings: converting them to JavaScript `Number` can round a key and replay a row even with the correct snapshot hash.
+
+Run the checkpoint checks from the repository root with Lean 4.19.0, Python and Node.js:
+
+```sh
+python3 -B scripts/check_checkpoint_page.py
+python3 -B scripts/check_checkpoint_walk.py
+python3 -B scripts/check_checkpoint_handoff.py
+```
+
+The proofs cover the typed model. The executable checks separately cover the recorded parsing and file cases. Ordinary tests also caught the deliberately introduced errors; this is not evidence that Lean catches more defects in production.
+
 ## Where the research goes next
 
 | Track | What you can use here |
 | --- | --- |
-| Python and TypeScript | A runnable example for both languages. The [next experiment](docs/experiments.md) compares ordinary tests with an agent using Lean on previously unseen changes. |
+| Python and TypeScript | Runnable reservation and checkpoint examples. The [research plan](docs/experiments.md) separates development cases from future held-out review comparisons. |
 | Rust | A planned pilot on one safe, fixed-width function using Aeneas. The [architecture](docs/architecture.md) describes which translation assumptions a source-level claim would inherit. |
 | An existing service | A protocol for bringing in one versioned decision function, its input contract and sanitized examples. The [agent instructions](AGENTS.md) define what counts as evidence. |
 

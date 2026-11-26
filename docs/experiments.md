@@ -14,6 +14,8 @@
 
 The [first held-out result](stage-1-lean-pilot-results.md) is now recorded. Adding Lean 4 did not increase defect detection in the six-revision pilot. Lean is not a default review requirement; the next comparison targets large-integer exchange and ordering.
 
+Development case: [checkpoint pagination](checkpoint-page.md) uses exact integer keys and checks snapshot identity. This synthetic case is not part of the held-out workflow study. [One-buffer traversal](checkpoint-walk.md) tests a reduced read count while preserving this separate local mode.
+
 ## The first comparative experiment
 
 1. A maintainer fixes the natural-language contract, reference outcomes, clean starting revision, allowed files and budgets in advance. Another person or process holds back the labeled revisions and final cases from the agent. Include valid changes to measure false alarms.

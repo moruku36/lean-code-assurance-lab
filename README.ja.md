@@ -35,11 +35,28 @@ python scripts/check.py
 
 Pythonのコマンド名が `python3` の環境では `python3 scripts/check.py` で実行できます。初回の公開実行では3定理が通り、両言語で各518件が一致し、境界を間違えた対照では40件の不一致が出ました。[記録したJSON](evidence/reservation-baseline.json)・[CIの実行履歴](https://github.com/moruku36/lean-code-assurance-lab/actions/workflows/assurance.yml)・[予約の例を読み解く手順](docs/walkthrough.ja.md)
 
+## Lean 4の検証結果
+
+- **レビュー比較**：[初回の未見比較](docs/stage-1-lean-pilot-results.md#日本語)の6件では、Leanを追加しても検出は増えませんでした。標準レビューにはまだ入れません。
+- **巨大整数とページ分割**：[チェックポイントの検証](docs/checkpoint-page.ja.md)では、各言語54件のページ要求と、言語をまたぐ12件の走査が一致しました。ファイルの内容が変わると、古いカーソルは拒否されます。
+- **一括走査**：合成データ1,000行の[実験](docs/checkpoint-walk.ja.md)では、同じ28ページを返しながら、Linuxでのファイルを開く回数が**28回から1回**になりました。処理時間は測っていません。
+- **カーソルの引き継ぎ**：[Python・TypeScript間の40件](docs/checkpoint-handoff.ja.md)が期待値と一致しました。キーは十進文字列のまま渡します。JavaScriptの `Number` に変換すると丸められ、ファイルのハッシュが正しくても読んだ行が再表示される場合があります。
+
+Lean 4.19.0、Python、Node.jsを用意して、リポジトリのルートで再現できます。
+
+```sh
+python3 -B scripts/check_checkpoint_page.py
+python3 -B scripts/check_checkpoint_walk.py
+python3 -B scripts/check_checkpoint_handoff.py
+```
+
+証明の対象は型付きモデルです。パースやファイルの振る舞いは別途、具体例で検証しました。意図的に入れた誤りは通常のテストでも検出でき、本番でLeanの検出力が上がると分かったわけではありません。
+
 ## 自分のサービスへの進め方
 
 | 対象 | このリポジトリでできること |
 | --- | --- |
-| Python・TypeScript | 両言語の予約例を実行できます。次は未使用の変更を使って、通常のテストとLeanを持たせたエージェントの検出力を比較します。[実験計画](docs/experiments.ja.md) |
+| Python・TypeScript | 両言語で予約・チェックポイントの例を再現できます。開発用の例と、今後の未見比較は分けて扱います。[実験計画](docs/experiments.ja.md) |
 | Rust | 固定長整数を使う小さな関数を選び、AeneasでLeanに変換する実験を計画しています。[変換時に確認する前提](docs/architecture.ja.md) |
 | 既存サービス | 一つの判定関数とその版、入力の契約、匿名化した例を持ち込む手順があります。[エージェントへの指示](AGENTS.md) |
 

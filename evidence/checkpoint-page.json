@@ -1,0 +1,58 @@
+{
+  "results": {
+    "alternating_cross_process_walks": 12,
+    "baseline_snapshot_sha256": "731202f5e0eb9b78009e9a0c5b12fc3a0782c6cc9bef829e2915a8fd8fbb8a75",
+    "empty_snapshot_per_runtime": 1,
+    "expected_pages_per_runtime": 54,
+    "insert_below_cursor_per_runtime": "rejected",
+    "invalid_requests_per_runtime": 10,
+    "invalid_snapshot_forms_per_runtime": 15,
+    "lean": {
+      "checked_pages": 54,
+      "theorems": {
+        "after_boundary_preserved": [
+          "propext"
+        ],
+        "before_boundary_filtered": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ],
+        "exact_remaining": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ],
+        "resume_accepts_exact": [
+          "propext"
+        ],
+        "resume_rejects_changed": [
+          "propext"
+        ],
+        "sorted_boundary_page": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ],
+        "stable_next_page": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      }
+    },
+    "number_negative_control_mismatches": 6,
+    "number_negative_witness_skipped": "9007199254740993",
+    "same_byte_replacement_per_runtime": "resumed",
+    "same_key_new_revision_per_runtime": "rejected_then_restart_observed_new_snapshot",
+    "unbound_negative_controls": [
+      "mixed_checkpoint_ids",
+      "omitted_inserted_key_1"
+    ]
+  },
+  "runtimes": {
+    "lean": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+    "node": "v24.22.3",
+    "python": "Python 3.12.14"
+  }
+}
