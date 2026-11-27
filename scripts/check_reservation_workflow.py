@@ -75,7 +75,8 @@ def checked_lean(lean, plans, tmp):
     (tmp / "Reservation.lean").write_bytes((ROOT / "Reservation.lean").read_bytes())
     require(not call([lean,"-DwarningAsError=true","-o","Reservation.olean","Reservation.lean"],cwd=tmp,env=env),
             "unexpected Reservation module output")
-    code = (ROOT / "ReservationWorkflow.lean").read_text()
+    # Lean source contains Unicode syntax; do not use the host locale here.
+    code = (ROOT / "ReservationWorkflow.lean").read_text(encoding="utf-8")
     code += "".join(f"\n#print axioms ReservationWorkflow.{claim}" for claim in sorted(CLAIMS))
     code += "".join("\n#eval ReservationWorkflow.report ["+",".join("."+s for s in plan)+"]" for plan in plans)
     code += "\n#eval ReservationWorkflow.emit ["+",".join(f"({a},{u},{r})" for a,u,r in CASES)+"]\n"

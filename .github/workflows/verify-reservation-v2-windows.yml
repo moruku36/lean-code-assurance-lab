@@ -28,13 +28,14 @@ jobs:
           $release = Invoke-RestMethod -TimeoutSec 20 -Uri "https://api.github.com/repos/leanprover/lean4/releases/tags/$tag"
           $asset = @($release.assets | Where-Object name -eq $name)
           $url = "https://github.com/leanprover/lean4/releases/download/$tag/$name"
-          if ($release.tag_name -ne $tag -or $asset.Count -ne 1 -or $asset[0].browser_download_url -cne $url) { throw 'Unexpected official release metadata' }
+          if ($release.tag_name -ne $tag -or $asset.Count -ne 1 -or $asset[0].id -ne 250981931 -or $asset[0].browser_download_url -cne $url) { throw 'Unexpected official release metadata' }
           $scratch = Join-Path $env:RUNNER_TEMP 'reservation-v2-lean'
           New-Item -ItemType Directory -Path $scratch | Out-Null
           $archive = Join-Path $scratch $name
           curl.exe --silent --show-error --fail --location --proto '=https' --proto-redir '=https' --connect-timeout 10 --max-time 150 --output $archive $url
           if ($LASTEXITCODE -ne 0 -or (Get-Item $archive).Length -ne $asset[0].size) { throw 'Official Lean asset download did not match its release size' }
           $observed = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
+          if ($observed -cne '2c197a74b6d9c4d46363e34e06591165ed848237ba66de849f8b8d5539eb3895') { throw 'Lean archive bytes changed since the prior exact release download' }
           $declared = $asset[0].digest
           if ($declared -and $declared -cne "sha256:$observed") { throw 'Official Lean release digest mismatch' }
           $publisherDigest = if ($declared) { $declared } else { 'not published in release metadata' }
