@@ -23,3 +23,7 @@ Record the source revision and function, intended behavior, domain and data type
 | Limits | Trusted translations, unmodeled effects, data representations and remaining review questions |
 
 Use a clean checkout for shareable evidence. A proof placeholder, extra assumption or silently weakened theorem changes the claim. Report it for review. Keep the oracle independent of the candidate's implementation and record edits to either side.
+
+## Opt-in checkpoint workflow review
+
+For a change to the Python/TypeScript checkpoint handoff, use the [Lean4Agent-inspired harness](docs/lean4agent.md) when the review needs evidence about the order of the steps as well as their output. Freeze the public fixture and the model, run the harness, and report the first failed stage and its counterexample when available. A passing structural check or Lean proof does not replace replay of the actual implementations. This is not a new default CI or held-out scoring requirement.
