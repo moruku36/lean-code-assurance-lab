@@ -1,0 +1,28 @@
+{
+  "case": "reservation-capture-file-import-v2",
+  "equivalent-unpinned-only": {
+    "compact": "784e1bdc3d9b44bb2228cb44c8a0d241233292a78c9fe686dc927e27a94a9790",
+    "crlf": "d0cf7ae8b5548662df60cb533edc4a3fd9ea7961347ff0a1b057f96b60c07c0f"
+  },
+  "exact-byte-roundtrips": [
+    "base64",
+    "raw",
+    "zip-deflate"
+  ],
+  "malformed-refused-at-real-cli": [
+    "escaped-top-level-duplicate",
+    "nested-duplicate",
+    "nonstandard-constant",
+    "top-level-duplicate",
+    "utf16",
+    "utf8-bom"
+  ],
+  "native-rust-runs": 0,
+  "positive-capture-provenance": "synthetic manifest; parser validation only",
+  "rewritten-refused-at-real-cli": [
+    "compact",
+    "crlf"
+  ],
+  "rust-capture-authenticated": false,
+  "synthetic-file-sha256": "b9a9e02fd4fbc922d2f7e0a711c8beade3d52d4109de5def34f9b8882cfd66ad"
+}

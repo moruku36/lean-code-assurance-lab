@@ -1,0 +1,124 @@
+name: Verify reservation v2 on one Windows host
+on:
+  push:
+    branches:
+      - verify/reservation-v2-windows-20261127
+permissions:
+  contents: read
+jobs:
+  windows-v2:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Materialize official pinned Lean release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') { throw 'Expected hosted Windows x64' }
+          $tag = 'v4.19.0'
+          $name = 'lean-4.19.0-windows.zip'
+          if ((Get-Content lean-toolchain -Raw).Trim() -ne "leanprover/lean4:$tag") { throw 'Wrong repository Lean pin' }
+          $release = Invoke-RestMethod -TimeoutSec 20 -Uri "https://api.github.com/repos/leanprover/lean4/releases/tags/$tag"
+          $asset = @($release.assets | Where-Object name -eq $name)
+          $url = "https://github.com/leanprover/lean4/releases/download/$tag/$name"
+          if ($release.tag_name -ne $tag -or $asset.Count -ne 1 -or $asset[0].browser_download_url -cne $url) { throw 'Unexpected official release metadata' }
+          $scratch = Join-Path $env:RUNNER_TEMP 'reservation-v2-lean'
+          New-Item -ItemType Directory -Path $scratch | Out-Null
+          $archive = Join-Path $scratch $name
+          curl.exe --silent --show-error --fail --location --proto '=https' --proto-redir '=https' --connect-timeout 10 --max-time 150 --output $archive $url
+          if ($LASTEXITCODE -ne 0 -or (Get-Item $archive).Length -ne $asset[0].size) { throw 'Official Lean asset download did not match its release size' }
+          $observed = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
+          $declared = $asset[0].digest
+          if ($declared -and $declared -cne "sha256:$observed") { throw 'Official Lean release digest mismatch' }
+          $publisherDigest = if ($declared) { $declared } else { 'not published in release metadata' }
+          Write-Output "LEAN_RELEASE_META: tag=$tag asset_id=$($asset[0].id) sha256=$observed publisher_digest=$publisherDigest"
+          [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $scratch)
+          $lean = @(Get-ChildItem -LiteralPath $scratch -Recurse -File -Filter lean.exe | Where-Object { $_.Directory.Name -eq 'bin' })
+          if ($lean.Count -ne 1) { throw 'Unexpected extracted Lean layout' }
+          $leanVersion = (& $lean[0].FullName --version) -join ' '
+          if ($LASTEXITCODE -ne 0 -or $leanVersion -notmatch 'version 4\.19\.0,.*commit 6caaee842e94') { throw "Unexpected Lean compiler: $leanVersion" }
+          "LEAN=$($lean[0].FullName)" >> $env:GITHUB_ENV
+      - name: Actual Lean oracle, Python, TypeScript and native Rust
+        shell: pwsh
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $python = @(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TOOL_CACHE 'Python') -Directory |
+            Where-Object { $_.Name -match '^3\.12\.\d+$' -and (Test-Path (Join-Path $_.FullName 'x64/python.exe')) } |
+            Sort-Object { [version]$_.Name } -Descending)
+          if ($python.Count -lt 1) { throw 'The hosted image has no cached Python 3.12 x64' }
+          $pythonExe = Join-Path $python[0].FullName 'x64/python.exe'
+          $rustVersion = (rustc -vV) -join [Environment]::NewLine
+          if ($LASTEXITCODE -ne 0 -or $rustVersion -notmatch '(?m)^rustc 1\.100\.0 ' -or $rustVersion -notmatch '(?m)^host: x86_64-pc-windows-msvc\r?$') { throw 'Native Windows MSVC Rust unavailable' }
+          Write-Output $rustVersion
+          @'
+          import hashlib, json, os, platform, subprocess, sys
+          from pathlib import Path
+          def setting(*args):
+              return subprocess.check_output(args).decode().strip()
+          assert platform.system() == "Windows" and sys.version_info[:2] == (3, 12)
+          assert setting("git", "rev-parse", "HEAD") == os.environ["EXPECTED_HEAD"]
+          assert int(setting("node", "--version")[1:].split(".")[0]) == 24
+          paths = [
+              "lean-toolchain", "Reservation.lean", "ReservationWorkflow.lean",
+              "examples/reservation/package.json", "examples/reservation/reserve.py",
+              "examples/reservation/reserve.ts", "examples/reservation/reserve.rs",
+              "scripts/check_reservation_workflow.py", "scripts/check_reservation_transport.py",
+              "scripts/check_reservation_capture_import.py", "evidence/reservation-rust-macos-capture.json",
+              "evidence/reservation-transport-bytes.json", "evidence/reservation-capture-import-v2.json",
+          ]
+          hashes = {}
+          for file in paths:
+              raw = subprocess.check_output(["git", "cat-file", "blob", f"HEAD:{file}"])
+              Path(file).write_bytes(raw)
+              hashes[file] = hashlib.sha256(raw).hexdigest()
+          def run(script):
+              p = subprocess.run([sys.executable, "-B", script], capture_output=True, timeout=150)
+              if p.returncode:
+                  sys.stdout.buffer.write(p.stdout)
+                  sys.stderr.buffer.write(p.stderr)
+                  raise RuntimeError(f"{script} exit {p.returncode}")
+              assert not p.stderr, p.stderr
+              return json.loads(p.stdout)
+          live = run("scripts/check_reservation_workflow.py")
+          assert live["status"] == "ok"
+          assert live["cases"] == 141 and live["live_matched"] == dict.fromkeys(("python", "typescript", "rust"), 141)
+          assert live["passed_layers"] == ["L1", "L2", "L3"]
+          assert live["receipt"] == {"source":"same-host live execution", "runtimes":["python", "typescript", "rust"]}
+          assert live["split_host_comparison"] is None
+          rust = live["rust"]
+          assert rust["capture_format"] == "reservation-rust-std-capture-v2"
+          assert rust["byte_transport"] == "staged-source-bytes-and-exact-utf8-stdin"
+          assert rust["source_sha256"] == hashes["examples/reservation/reserve.rs"]
+          assert rust["out_of_domain_refused"] is True
+          assert rust["in_domain_addition_overflow_cases_rejected"] == 5
+          assert "host: x86_64-pc-windows-msvc" in rust["compiler"]
+          assert live["controls"]["strict"]["actual"] == "reject"
+          assert live["controls"]["wrap"]["actual"] == "0"
+          for name in ("strict", "wrap"):
+              assert live["controls"][name]["layer"] == "L3" and live["controls"][name]["receipt"] is None
+          t = run("scripts/check_reservation_transport.py")
+          c = run("scripts/check_reservation_capture_import.py")
+          assert t == json.loads(Path("evidence/reservation-transport-bytes.json").read_bytes())
+          assert c == json.loads(Path("evidence/reservation-capture-import-v2.json").read_bytes())
+          evidence = {"source_head":os.environ["EXPECTED_HEAD"], "source_sha256":hashes,
+                      "platform":platform.platform(), "same_host":live,
+                      "transport_controls":t, "persisted_import_controls":c}
+          serial = json.dumps(evidence, sort_keys=True, separators=(",", ":"))
+          digest = hashlib.sha256(serial.encode("utf-8")).hexdigest()
+          print("RESERVATION_V2_EVIDENCE_SHA256: " + digest)
+          print("RESERVATION_V2_EVIDENCE: " + serial)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("### Reservation v2 native Windows replay\n\n")
+              out.write("Evidence JSON SHA-256: " + digest + "\n\n")
+              out.write("```json\n" + json.dumps(evidence, indent=2, sort_keys=True) + "\n```\n")
+          '@ | & $pythonExe -B -
+          if ($LASTEXITCODE -ne 0) { throw 'Reservation v2 replay or a control failed' }

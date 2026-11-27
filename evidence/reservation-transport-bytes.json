@@ -1,0 +1,15 @@
+{
+  "case": "reservation-transport-bytes-v2",
+  "exact_crlf_variant_file_checks": 3,
+  "false_capture_controls_refused": 4,
+  "legacy_real_capture_format_accepted": "reservation-rust-std-capture-v1",
+  "native_rust_runs_by_this_test": 0,
+  "new_capture_schema_tested_with_metadata_only": "reservation-rust-std-capture-v2",
+  "pipe_fixture_sha256": {
+    "crlf": "3697bd3bd8d7b6b8dd0a9183ffef321aefd8e933248ae2fdd95fee23fba15aa0",
+    "lf": "b043caaddde20299228c06f9e7e71d2aa8930ff2036b7779a5c455b01735618e",
+    "mixed": "7ef000972ab4e1cef85d1df9c599dcc623ed20108f1443d7d970951e085d2ef9"
+  },
+  "real_child_pipe_checks": 6,
+  "text_newline_translation_changes_sha": true
+}

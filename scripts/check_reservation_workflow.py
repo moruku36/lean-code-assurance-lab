@@ -27,6 +27,10 @@ CASES = list(dict.fromkeys([(10,7,3),(MAX,MAX,1)] + list(itertools.product(range
 ]))
 WIRE = "".join(f"{a} {u} {r}\n" for a,u,r in CASES)
 VARIANTS = {"checked", "strict", "wrap"}
+CAPTURE_V1 = "reservation-rust-std-capture-v1"
+CAPTURE_V2 = "reservation-rust-std-capture-v2"
+CAPTURE_BYTES = "staged-source-bytes-and-exact-utf8-stdin"
+LEGACY_BYTES = "legacy-canonical-hashes-not-transport-attestation"
 PYTHON_ADAPTER = """import sys
 sys.path.insert(0,sys.argv[1])
 from reserve import reserve
@@ -41,10 +45,14 @@ def sha(data):
 
 
 def call(command, wire=None, cwd=None, env=None):
-    p = subprocess.run(command,input=wire,text=True,capture_output=True,timeout=30,cwd=cwd,env=env)
+    # The SHA covers these bytes, not a host-specific translation of LF.
+    data = wire.encode("utf-8") if isinstance(wire, str) else wire
+    p = subprocess.run(command,input=data,capture_output=True,timeout=30,cwd=cwd,env=env)
     if p.returncode or p.stderr:
-        raise RuntimeError(f"{Path(command[0]).name} failed (exit {p.returncode}): {p.stdout}{p.stderr}")
-    return p.stdout
+        detail = (p.stdout+p.stderr).decode("utf-8",errors="replace")
+        raise RuntimeError(f"{Path(command[0]).name} failed (exit {p.returncode}): {detail}")
+    # For report strings only; this does not affect or describe bytes on stdin.
+    return p.stdout.decode("utf-8").replace("\r\n","\n")
 
 
 def require(condition, reason):
@@ -87,44 +95,52 @@ def checked_lean(lean, plans, tmp):
     return toolchain,audit,static,values
 
 
-def rust_source_hashes():
-    body = SOURCE.read_text()
-    require(body.count("next <= capacity")==1 and body.count("used.checked_add(request)")==1,
+def rust_source_hashes(*, legacy=False):
+    original = SOURCE.read_bytes()
+    body = original.replace(b"\r\n",b"\n").replace(b"\r",b"\n") if legacy else original
+    require(body.count(b"next <= capacity")==1 and body.count(b"used.checked_add(request)")==1,
             "Rust source no longer matches deliberate controls")
-    texts = {"checked":body, "strict":body.replace("next <= capacity","next < capacity"),
-             "wrap":body.replace("used.checked_add(request)","Some(used.wrapping_add(request))")}
-    return texts,{k:sha(v.encode("utf-8")) for k,v in texts.items()}
+    texts = {"checked":body, "strict":body.replace(b"next <= capacity",b"next < capacity"),
+             "wrap":body.replace(b"used.checked_add(request)",b"Some(used.wrapping_add(request))")}
+    return original,texts,{k:sha(v) for k,v in texts.items()}
 
 
 def rust_capture(rust, tmp):
     version = call([rust,"-vV"]).strip()
-    texts, variants = rust_source_hashes()
+    original,texts,variants = rust_source_hashes()
     transcripts = {}
     for label,body in texts.items():
         source = tmp / (label+".rs")
         binary = tmp / (label + (".exe" if os.name == "nt" else ""))
-        source.write_text(body)
+        source.write_bytes(body)
         call([rust,"--edition=2021","-Dwarnings","-C","overflow-checks=yes",
               str(source),"-o",str(binary)])
         transcripts[label] = call([str(binary)],WIRE).splitlines()
         if label=="checked":
-            too_wide = subprocess.run([str(binary)],input=f"{MAX+1} 0 0\n",text=True,
+            too_wide = subprocess.run([str(binary)],input=f"{MAX+1} 0 0\n".encode("ascii"),
                                       capture_output=True,timeout=10)
             refused = (too_wide.returncode != 0 and not too_wide.stdout
-                       and "expected three unsigned u64 decimals" in too_wide.stderr)
+                       and b"expected three unsigned u64 decimals" in too_wide.stderr)
             require(refused,"Rust did not reject input outside the declared wire domain")
-    return {"format":"reservation-rust-std-capture-v1","compiler":version,
-            "source_sha256":sha(SOURCE.read_bytes()),"wire_sha256":sha(WIRE.encode("ascii")),
+    return {"format":CAPTURE_V2,"byte_transport":CAPTURE_BYTES,"compiler":version,
+            "source_sha256":sha(original),"wire_sha256":sha(WIRE.encode("ascii")),
             "variant_sha256":variants,"out_of_domain_refused":refused,"results":transcripts}
 
 
 def check_capture(data):
-    require(type(data) is dict and set(data)=={"format","compiler","source_sha256","wire_sha256",
-                "variant_sha256","out_of_domain_refused","results"},"unexpected Rust capture shape")
-    _, expected_variants = rust_source_hashes()
-    require(data["format"]=="reservation-rust-std-capture-v1" and
+    require(type(data) is dict and data.get("format") in (CAPTURE_V1,CAPTURE_V2),
+            "unexpected Rust capture format")
+    legacy = data["format"]==CAPTURE_V1
+    fields = {"format","compiler","source_sha256","wire_sha256",
+              "variant_sha256","out_of_domain_refused","results"}
+    if not legacy:
+        fields.add("byte_transport")
+        require(data.get("byte_transport")==CAPTURE_BYTES,"unexpected Rust byte transport declaration")
+    require(data.keys()==fields,"unexpected Rust capture shape")
+    original,_,expected_variants = rust_source_hashes(legacy=legacy)
+    require(
             type(data["compiler"]) is str and data["compiler"].startswith("rustc ") and
-            "\nhost:" in data["compiler"] and data["source_sha256"]==sha(SOURCE.read_bytes()) and
+            "\nhost:" in data["compiler"] and data["source_sha256"]==sha(original) and
             data["wire_sha256"]==sha(WIRE.encode("ascii")) and
             data["variant_sha256"]==expected_variants and data["out_of_domain_refused"] is True and
             type(data["results"]) is dict and data["results"].keys()==VARIANTS,
@@ -135,6 +151,33 @@ def check_capture(data):
                     (re.fullmatch(r"0|[1-9][0-9]{0,19}",x) and int(x)<=MAX)) for x in values),
                 "invalid Rust capture output")
     return data
+
+
+def unique_json_object(pairs):
+    result = {}
+    for name,value in pairs:
+        require(name not in result,"duplicate JSON object field in Rust capture")
+        result[name] = value
+    return result
+
+
+def reject_json_constant(_value):
+    raise RuntimeError("nonstandard JSON constant in Rust capture")
+
+
+def load_capture(path, expected_sha256=None):
+    # Read once: compare the exact delivered bytes, then parse that same byte string.
+    raw = path.read_bytes()
+    digest = sha(raw)
+    require(expected_sha256 is None or digest==expected_sha256,
+            "Rust capture SHA-256 does not match expected bytes")
+    require(not raw.startswith(b"\xef\xbb\xbf"),"Rust capture must be UTF-8 without a BOM")
+    try:
+        data = json.loads(raw.decode("utf-8"),object_pairs_hook=unique_json_object,
+                          parse_constant=reject_json_constant)
+    except (UnicodeDecodeError,json.JSONDecodeError) as error:
+        raise RuntimeError("Rust capture must be a valid UTF-8 JSON document") from error
+    return check_capture(data),digest
 
 
 def compare(language, expected, rows):
@@ -166,7 +209,18 @@ def main():
     modes = p.add_mutually_exclusive_group()
     modes.add_argument("--capture-rust",action="store_true",help="execute only native Rust and emit a capture on stdout")
     modes.add_argument("--rust-evidence",type=Path,help="explicitly compare a trusted capture; no native Rust receipt for this run")
+    p.add_argument("--rust-evidence-sha256", metavar="HEX",
+                   help="optional expected SHA-256 of the exact imported file bytes; not host authentication")
     args = p.parse_args()
+    pin = args.rust_evidence_sha256
+    if pin is not None and (args.rust_evidence is None or not re.fullmatch(r"[0-9a-fA-F]{64}",pin)):
+        p.error("--rust-evidence-sha256 requires --rust-evidence and a 64-digit hexadecimal SHA-256")
+    imported = None
+    if args.rust_evidence is not None:
+        try:
+            imported = load_capture(args.rust_evidence,None if pin is None else pin.lower())
+        except (OSError,RuntimeError) as error:
+            p.exit(1,f"Rust evidence refused: {error}\n")
     require(all(0<=x<=MAX for t in CASES for x in t),"fixture outside u64 domain")
     rust = available(os.environ.get("RUSTC","rustc"))
     if args.capture_rust:
@@ -212,9 +266,8 @@ def main():
             summary.update({"status":"blocked","layer":"L3","step":"rust","predicate":"rustc-unavailable"})
             report_file(summary)
             return 2
-        if args.rust_evidence is not None:
-            capture_bytes = args.rust_evidence.read_bytes()
-            capture = check_capture(json.loads(capture_bytes))
+        if imported is not None:
+            capture, capture_sha256 = imported
         else:
             capture = check_capture(rust_capture(rust,tmp))
         for variant in ("strict","wrap"):
@@ -230,6 +283,8 @@ def main():
             return 1
         summary["rust"] = {k:capture[k] for k in ("compiler","source_sha256","wire_sha256","out_of_domain_refused")}
         summary["rust"]["in_domain_addition_overflow_cases_rejected"] = sum(u+r>MAX for _,u,r in CASES)
+        summary["rust"]["capture_format"] = capture["format"]
+        summary["rust"]["byte_transport"] = capture.get("byte_transport",LEGACY_BYTES)
         if args.rust_evidence is None:
             summary["live_matched"]["rust"] = len(CASES)
             summary.update({"status":"ok","passed_layers":["L1","L2","L3"],
@@ -237,7 +292,8 @@ def main():
         else:
             summary.update({"status":"split-host-results-match",
                             "split_host_comparison":{"rust_matched_cases":len(CASES),
-                                "capture_sha256":sha(capture_bytes),
+                                "capture_sha256":capture_sha256,
+                                "expected_sha256_matched":None if pin is None else True,
                                 "not_live_here":True,"capture_authentication":"not provided by hashes"}})
         report_file(summary)
     return 3 if args.rust_evidence is not None else 0
