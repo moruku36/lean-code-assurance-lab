@@ -1,0 +1,56 @@
+name: One-off Windows Rust verification for PR 2
+on:
+  push:
+    branches: ["verify/windows-rust-pr2-20261127"]
+    paths: [".github/workflows/windows-rust-pr2.yml"]
+permissions:
+  contents: read
+jobs:
+  windows-rust:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: "ed458644df690ec3fdc6c3e5c110b707aff1f992"
+          persist-credentials: false
+      - name: Compile and run the exact PR Rust code
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_OS -ne 'Windows') { throw 'Expected a Windows runner' }
+          if ((git rev-parse HEAD).Trim() -ne 'ed458644df690ec3fdc6c3e5c110b707aff1f992') { throw 'Wrong source revision' }
+          @'
+          from pathlib import Path
+          import subprocess
+          for file in ("examples/reservation/reserve.rs", "scripts/check_reservation_workflow.py", "evidence/reservation-rust-macos-capture.json"):
+              Path(file).write_bytes(subprocess.check_output(["git", "cat-file", "blob", f"HEAD:{file}"]))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Exact blob materialization failed' }
+          rustc -vV
+          if ($LASTEXITCODE -ne 0) { throw 'Rust compiler unavailable' }
+          @'
+          import json, runpy, subprocess, sys
+          from pathlib import Path
+          runner = "scripts/check_reservation_workflow.py"
+          spec = runpy.run_path(runner)
+          raw = subprocess.check_output([sys.executable, "-B", runner, "--capture-rust"])
+          native = json.loads(raw)
+          fixed = json.loads(Path("evidence/reservation-rust-macos-capture.json").read_bytes())
+          def check(ok, reason):
+              if not ok:
+                  raise SystemExit(reason)
+          check("host: x86_64-pc-windows-" in native["compiler"], "not native Windows x64")
+          for key in ("source_sha256", "wire_sha256", "variant_sha256", "results", "out_of_domain_refused"):
+              check(native[key] == fixed[key], f"pinned evidence mismatch: {key}")
+          cases, limit, results = spec["CASES"], spec["MAX"], native["results"]
+          expected = [str(u+r) if u <= c and r <= c-u else "reject" for c,u,r in cases]
+          overflow = [i for i, (_, u, r) in enumerate(cases) if u+r > limit]
+          check(len(cases) == 141 and results["checked"] == expected, "live Rust mismatch")
+          check(len(overflow) == 5 and all(results["checked"][i] == "reject" for i in overflow), "overflow not refused")
+          check(results["strict"][cases.index((10,7,3))] == "reject" and expected[cases.index((10,7,3))] == "10", "strict control missed")
+          check(results["wrap"][cases.index((limit,limit,1))] == "0" and expected[cases.index((limit,limit,1))] == "reject", "wrap control missed")
+          check(native["out_of_domain_refused"] is True, "out-of-domain input not refused")
+          print(json.dumps({"verified_source": "ed458644df690ec3fdc6c3e5c110b707aff1f992", "os": "Windows", "compiler": native["compiler"], "rust_matches": 141, "add_overflow_rejected": 5, "strict_control_detected": True, "wrap_control_detected": True, "out_of_domain_refused": True, "source_sha256": native["source_sha256"], "wire_sha256": native["wire_sha256"]}, sort_keys=True))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Rust evidence failed' }
