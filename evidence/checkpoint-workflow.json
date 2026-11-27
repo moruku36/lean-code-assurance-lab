@@ -1,0 +1,98 @@
+{
+  "case": "checkpoint-workflow-v1",
+  "cases": {
+    "compare-before-read": {
+      "layer": "L2",
+      "passed_layers": [
+        "L1"
+      ],
+      "predicate": "python-observation-declared",
+      "reader_invocations": [],
+      "receipt": null,
+      "status": "rejected",
+      "step": "compare"
+    },
+    "different-page-width": {
+      "layer": "L3",
+      "passed_layers": [
+        "L1",
+        "L2"
+      ],
+      "predicate": "exact-rows-and-page-boundaries",
+      "reader_invocations": [
+        "python",
+        "typescript"
+      ],
+      "receipt": null,
+      "status": "rejected",
+      "step": "compare"
+    },
+    "different-snapshot": {
+      "layer": "L3",
+      "passed_layers": [
+        "L1",
+        "L2"
+      ],
+      "predicate": "same-snapshot-digest",
+      "reader_invocations": [
+        "python",
+        "typescript"
+      ],
+      "receipt": null,
+      "status": "rejected",
+      "step": "compare"
+    },
+    "receipt-before-compare": {
+      "layer": "L2",
+      "passed_layers": [
+        "L1"
+      ],
+      "predicate": "comparison-declared",
+      "reader_invocations": [],
+      "receipt": null,
+      "status": "rejected",
+      "step": "receipt"
+    },
+    "reference": {
+      "model_claim_axioms": {
+        "compare_requires_python": [
+          "propext"
+        ],
+        "receipt_requires_comparison": [
+          "propext"
+        ]
+      },
+      "passed_layers": [
+        "L1",
+        "L2",
+        "L3"
+      ],
+      "reader_invocations": [
+        "python",
+        "typescript"
+      ],
+      "receipt": {
+        "pages": 3,
+        "readers": [
+          "python",
+          "typescript"
+        ],
+        "rows": 5,
+        "snapshot_sha256": "158f1c8bce8f5de387a76f57ab37b77e24719c146f5809cd3b41abbebf55ba43"
+      },
+      "status": "ok"
+    },
+    "unknown-transition": {
+      "layer": "L1",
+      "passed_layers": [],
+      "predicate": "known-next-node",
+      "reader_invocations": [],
+      "receipt": null,
+      "status": "rejected",
+      "step": "read"
+    }
+  },
+  "lean": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "node": "v24.22.3",
+  "python": "3.12.14"
+}
