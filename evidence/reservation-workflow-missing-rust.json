@@ -1,0 +1,41 @@
+{
+  "cases": 141,
+  "controls": {
+    "early_receipt": {
+      "layer": "L2",
+      "predicate": "all-three-results-declared",
+      "step": "receipt"
+    },
+    "structure": {
+      "layer": "L1",
+      "predicate": "unique-required-stages",
+      "step": "plan"
+    }
+  },
+  "experiment": "reservation-workflow-u64-v1",
+  "layer": "L3",
+  "live_matched": {
+    "python": 141,
+    "typescript": 141
+  },
+  "node": "v24.22.3",
+  "passed_layers": [
+    "L1",
+    "L2"
+  ],
+  "predicate": "rustc-unavailable",
+  "proof_axioms": {
+    "receipt_requires_all_runtimes": [
+      "propext"
+    ],
+    "width_guard_preserves_bounded_reservation": [
+      "propext"
+    ]
+  },
+  "python": "3.12.14",
+  "receipt": null,
+  "split_host_comparison": null,
+  "status": "blocked",
+  "step": "rust",
+  "toolchain": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)"
+}

@@ -41,6 +41,8 @@ On systems where Python is named `python3`, use `python3 scripts/check.py`. The 
 - **Exact pagination:** The [checkpoint case](docs/checkpoint-page.md) matched 54 page requests per language and 12 alternating traversals. A changed snapshot rejects the old cursor.
 - **One-buffer traversal:** On a synthetic 1,000-row fixture, the [opt-in walk](docs/checkpoint-walk.md) returned the same 28 pages with **one file open instead of 28** on Linux. This is not a wall-clock benchmark.
 - **Cursor handoff:** [40 Python/TypeScript handoffs](docs/checkpoint-handoff.md) matched the reference. Keep cursor keys as decimal strings: converting them to JavaScript `Number` can round a key and replay a row even with the correct snapshot hash.
+- **Agent workflow harness:** The [Lean4Agent reading note](docs/lean4agent.md) maps workflow structure, reviewed contracts, and observed checkpoint execution to separate checks.
+- **Python / TypeScript / Rust:** The [shared reservation harness](docs/lean4agent.md#three-language-reservation-pilot) separates stage checks, Lean proofs and each runtime's output. The first split-host run matched 141 cases per language.
 
 Run the checkpoint checks from the repository root with Lean 4.19.0, Python and Node.js:
 
